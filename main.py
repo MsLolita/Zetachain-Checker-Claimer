@@ -21,7 +21,7 @@ class ConsoleTableFormatter:
         self.headers = ["#", "Wallet Address", "Total Tokens", "Status"]
         self.results = []
         self.table_top_printed = False
-        self.column_widths = [3, 18, 12, 8]
+        self.column_widths = [3, 18, 12, 12]
 
     async def add_result(self, index, wallet, tokens, status):
         self.results.append([index, wallet, tokens, status])
@@ -92,7 +92,7 @@ class AirdropAllocator:
                                    headers=self.headers, json=json_data, proxy=self.proxy, verify_ssl=False) as response:
 
                 data = await response.json()
-
+                logger.debug(f"{self.wallet_address} - {data}")
                 return data
 
     def beautify_and_log(self, data, log_filename='airdrop_log.json'):
@@ -126,13 +126,13 @@ class AirdropAllocator:
         async with semaphore:
             try:
                 data = await self.fetch_airdrop_info()
-
+                tokens = 0
                 if not data.get('success'):
                     status = "Some Error"
                     with open("logs/errors.txt", "a") as f:
                         f.write(f"{self.wallet_address}\n")
                 elif not data.get('data', {}).get('claims'):
-                    status = "No Airdrop"
+                    status = "Not Eligible"
                 else:
                     status = "Eligible"
                     tokens = str(int(data['data']['claims'][0]['amount']) / 10 ** 18)[:5]
@@ -167,7 +167,7 @@ async def main():
 
     tasks = []
 
-    print("+-----+------------------+----------------+----------+")
+    print("+-----+------------------+----------------+--------------+")
 
     for i, wallet in enumerate(wallet_addresses):
         proxy = proxies[i % len(proxies)] if proxies else None
@@ -176,7 +176,7 @@ async def main():
 
     await asyncio.gather(*tasks)
 
-    print("+-----+------------------+----------------+----------+")
+    print("+-----+------------------+----------------+--------------+")
     logger.success(f"Total tokens: {all_tokens}")
 
 if __name__ == '__main__':
